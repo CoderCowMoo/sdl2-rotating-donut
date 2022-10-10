@@ -43,6 +43,9 @@ fn main() -> Result<(), String> {
     // game loop init
     let mut event_pump = sdl_context.event_pump()?;
 
+    // variables for torus rotation
+    let mut a: f64 = 0.0;
+    let mut b: f64 = 0.0;
     'running: loop {
         // get inputs here
         for event in event_pump.poll_iter() {
@@ -58,9 +61,13 @@ fn main() -> Result<(), String> {
 
         // game loop here
         // change colour
+        canvas.set_draw_color(Color::RGB(0, 0, 0));
+        canvas.clear();
         canvas.set_draw_color(Color::RGB(255, 255, 255));
-        let r1 = 40.0; // radius of inner circle.
-        let r2 = 100.0; // radius of torus
+        let r1 = 80.0; // radius of inner circle.
+        let r2 = 150.0; // radius of torus
+        const K2: f64 = 5000.0;
+        let k1: f64 = WIN_DIMENSIONS.0 as f64 * K2 * 3.0 / (8.0 * (r1 + r2));
         for i in (0..628).step_by(15) {
             // 628 is pi * 2
 
@@ -73,10 +80,28 @@ fn main() -> Result<(), String> {
             for j in (0..628).step_by(10) {
                 let cos_p = (j as f64 / 100.0).cos();
                 let sin_p = (j as f64 / 100.0).sin();
-                let x = x2 * cos_p;
-                let y = y2;
-                draw(&mut canvas, x as i32, y as i32, WIN_DIMENSIONS)?;
+                // abslutely insane rotation matrices lmao
+                // https://www.cantorsparadise.com/why-a-spinning-donut-is-a-pure-math-e4dccc6294b0
+                // also check out Andy Sloane's explanation
+                // when the rotations seem to compress when turning a certain way it means that the below
+                // equations are incorrect
+                let x = x2 * (b.cos() * cos_p + a.sin() * b.sin() * sin_p) - y2 * a.cos() * b.sin();
+                let y = x2 * (cos_p * b.sin() - b.cos() * a.sin() * sin_p) + y2 * a.cos() * b.cos();
+                let iz = 1.0 / (K2 + r1 * a.sin() * sin_t + a.cos() * sin_p * x2); // inverse z
+
+                // final point coords
+                let xp = (x * k1 * iz).floor() as i32;
+                let yp = (-y * k1 * iz).floor() as i32;
+
+                draw(&mut canvas, xp, yp, WIN_DIMENSIONS)?;
             }
+        }
+        if a != 2.0 {
+            a += 0.01;
+            b += 0.005;
+        } else {
+            a = 0.0;
+            b = 0.0;
         }
         canvas.present(); // push to canvas
     }
