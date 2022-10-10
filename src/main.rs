@@ -5,10 +5,15 @@ use sdl2::rect::Point;
 use sdl2::render::Canvas;
 use sdl2::video::Window;
 
-fn draw(canvas: &mut Canvas<Window>, x: i32, y: i32, dimensions: (u32, u32)) -> Result<(), String> {
+fn draw(canvas: &mut Canvas<Window>, x: i32, y: i32, dimensions: (u32, u32), col: Color) {
     let x_offset = dimensions.0 / 2;
     let y_offset = dimensions.1 / 2;
-    canvas.draw_point(Point::new(x + x_offset as i32, y + y_offset as i32))
+    let prev_colour = canvas.draw_color();
+    canvas.set_draw_color(col);
+    canvas
+        .draw_point(Point::new(x + x_offset as i32, y + y_offset as i32))
+        .unwrap();
+    canvas.set_draw_color(prev_colour);
 }
 
 fn main() -> Result<(), String> {
@@ -46,6 +51,8 @@ fn main() -> Result<(), String> {
     // variables for torus rotation
     let mut a: f64 = 0.0;
     let mut b: f64 = 0.0;
+    #[allow(dead_code)]
+    const WHITE: Color = Color::RGB(255, 255, 255);
     'running: loop {
         // get inputs here
         for event in event_pump.poll_iter() {
@@ -68,7 +75,7 @@ fn main() -> Result<(), String> {
         let r2 = 150.0; // radius of torus
         const K2: f64 = 5000.0;
         let k1: f64 = WIN_DIMENSIONS.0 as f64 * K2 * 3.0 / (8.0 * (r1 + r2));
-        for i in (0..628).step_by(15) {
+        for i in (0..628).step_by(5) {
             // 628 is pi * 2
 
             let cos_t = (i as f64 / 100.0).cos();
@@ -77,7 +84,7 @@ fn main() -> Result<(), String> {
             let y2 = r1 * sin_t;
 
             // draw the other circles
-            for j in (0..628).step_by(10) {
+            for j in (0..628).step_by(4) {
                 let cos_p = (j as f64 / 100.0).cos();
                 let sin_p = (j as f64 / 100.0).sin();
                 // abslutely insane rotation matrices lmao
@@ -93,7 +100,21 @@ fn main() -> Result<(), String> {
                 let xp = (x * k1 * iz).floor() as i32;
                 let yp = (-y * k1 * iz).floor() as i32;
 
-                draw(&mut canvas, xp, yp, WIN_DIMENSIONS)?;
+                // luminance
+                let l = cos_p * cos_t * b.sin() - a.cos() * cos_t * sin_p - a.sin() * sin_t
+                    + b.cos() * (a.cos() * sin_t - cos_t * a.sin() * sin_p);
+
+                if l > 0.0 {
+                    let rl = -(l * 180.0).round() as i32; // rounded luminance
+                    let l_index = (255 - rl) as u8;
+                    draw(
+                        &mut canvas,
+                        xp,
+                        yp,
+                        WIN_DIMENSIONS,
+                        Color::RGB(l_index, l_index, l_index),
+                    );
+                }
             }
         }
         if a != 2.0 {
