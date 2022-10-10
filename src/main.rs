@@ -63,11 +63,20 @@ fn main() -> Result<(), String> {
         let r2 = 100.0; // radius of torus
         for i in (0..628).step_by(15) {
             // 628 is pi * 2
+
             let cos_t = (i as f64 / 100.0).cos();
             let sin_t = (i as f64 / 100.0).sin();
-            let x = r2 + r1 * cos_t;
-            let y = r1 * sin_t;
-            draw(&mut canvas, x as i32, y as i32, WIN_DIMENSIONS)?;
+            let x2 = r2 + r1 * cos_t;
+            let y2 = r1 * sin_t;
+
+            // draw the other circles
+            for j in (0..628).step_by(10) {
+                let cos_p = (j as f64 / 100.0).cos();
+                let sin_p = (j as f64 / 100.0).sin();
+                let x = x2 * cos_p;
+                let y = y2;
+                draw(&mut canvas, x as i32, y as i32, WIN_DIMENSIONS)?;
+            }
         }
         canvas.present(); // push to canvas
     }
